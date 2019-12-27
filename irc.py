@@ -5,14 +5,15 @@ import sys
 
 class IRC:
 
-#    irc = socket.socket()
-    defaultChan = "#qwepoi"
 
     def __init__(self):
         # Define socket
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def message(self, msg, target=defaultChan):
+
+    def message(self, msg, target=None):
+        if target is None:
+            target = self.defaultChan
         # Transfer data
         self.irc.send(bytes("PRIVMSG " + target + " :" + msg + "\n", "UTF-8"))
 
@@ -29,6 +30,8 @@ class IRC:
         return response
 
     def connect(self, server, port, channel, botNick, password):
+        self.defaultChan = channel
+
         print("Connecting to: " + server)
         self.irc.connect((server, port))
 
@@ -55,6 +58,7 @@ class IRC:
 
         while keepLooping:
             query = self.getResponse()
+            print(query)
 
             if query.find("End of /MOTD command.") != -1:
                 print("Found end of MOTD, attempting to join channel")
