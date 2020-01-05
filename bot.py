@@ -5,19 +5,25 @@ import json
 import threading
 import time
 
+try:
+    from sensors import DHT
+    dht = DHT()
+except:
+    print("Sensors not imported")
+
 
 # Loads a config file from the current directory
 with open("config.json", mode="r", encoding="utf-8") as file:
-    config = json.load(file)
+    config: dict = json.load(file)
 
 # Declarations
-server = config["server"]
-port = config["port"]
-channel = config["channel"]
-botNick = config["botNick"]
-password = config["password"]
-adminName = config["adminName"]
-exitCode = "bye " + botNick
+server: str = config["server"]
+port: int = config["port"]
+channel: str = config["channel"]
+botNick: str = config["botNick"]
+password: str = config["password"]
+adminName: str = config["adminName"]
+exitCode: str = "bye " + botNick
 
 stopThreads: bool = False
 
@@ -32,15 +38,18 @@ irc.connect(server, port, channel, botNick, password)
 
 def randTimeMessage(stop):
     while stop() is False:
-        irc.message("Scheduled message")
+        randInt: int = random.randint(2,7)
+        irc.message("Spam >:)")
         print("randTime started")
-        time.sleep(3)
+        time.sleep(randInt)
+
 
 # Creates a new thread, thread's target function will just spam the channel at an interval
 # Gets passed an argument so the thread can be killed safely, and set as a Daemon so the
 # thread is guaranteed to terminate when the main thread terminates
 spamThread = threading.Thread(target=randTimeMessage, args=(lambda: stopThreads,), daemon=True)
 spamThread.start()
+
 
 # Response loop
 while True:
@@ -56,16 +65,28 @@ while True:
 
         if "$threads" in message:
             irc.message(f"Active threads: {threading.active_count()}")
+        
+        if "$sensors" in message:
+            try:
+                data = dht.getTempHumidity()
+                print("Sensor data:", data)
+                if data is not False:
+                    irc.message(f"Temperature: {data[0]:.1f}, Humidity: {data[1]:.1f}")
+                else:
+                    irc.message("Failed to retrieve data")
+            except:
+                irc.message("Sensor module not loaded!")
 
         # Kills the thread safely
         if name.lower() == adminName.lower() and message.rstrip() == "$stop":
             print("Stopping repeated message")
+            irc.message(f"S-sorry {name} I'll stop spamming...")
             stopThreads = True
             spamThread.join()
 
         if name.lower() == adminName.lower() and message.rstrip() == exitCode:
             irc.message("oh...okay. :'(")
             stopThreads = True
-            # Send the quit command to the IRC server so it knows we’re disconnecting.
+            # Send quit command to the server
             irc.quit()
             break
