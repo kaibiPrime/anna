@@ -4,12 +4,9 @@ import sys
 
 
 class IRC:
-
-
     def __init__(self):
         # Define socket
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
 
     def message(self, msg, target=None):
         if target is None:
@@ -37,16 +34,7 @@ class IRC:
 
         # Perform user authentication
         self.irc.send(
-            bytes(
-                "USER "
-                + botNick
-                + " "
-                + botNick
-                + " "
-                + botNick
-                + " :python\n",
-                "UTF-8",
-            )
+            bytes("USER " + botNick + " " + botNick + " " + botNick + " :python\n", "UTF-8",)
         )
         self.irc.send(bytes("NICK " + botNick + "\n", "UTF-8"))
         self.irc.send(bytes("AUTH " + botNick + " " + password + "\n", "UTF-8"))

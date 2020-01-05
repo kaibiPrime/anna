@@ -6,12 +6,11 @@ import threading
 import time
 
 
-
-
-# Config
+# Loads a config file from the current directory
 with open("config.json", mode="r", encoding="utf-8") as file:
     config = json.load(file)
 
+# Declarations
 server = config["server"]
 port = config["port"]
 channel = config["channel"]
@@ -20,21 +19,28 @@ password = config["password"]
 adminName = config["adminName"]
 exitCode = "bye " + botNick
 
+stopThreads: bool = False
 
 # print(config)
 # print(config["port"])
 
+
+# Connect to IRC
 irc = IRC()
 irc.connect(server, port, channel, botNick, password)
 
-def randTimeMessage():
-    while True:
+
+def randTimeMessage(stop):
+    while stop() is False:
         irc.message("Scheduled message")
         print("randTime started")
         time.sleep(3)
 
-thread = threading.Thread(target=randTimeMessage)
-thread.start()
+# Creates a new thread, thread's target function will just spam the channel at an interval
+# Gets passed an argument so the thread can be killed safely, and set as a Daemon so the
+# thread is guaranteed to terminate when the main thread terminates
+spamThread = threading.Thread(target=randTimeMessage, args=(lambda: stopThreads,), daemon=True)
+spamThread.start()
 
 # Response loop
 while True:
@@ -45,12 +51,21 @@ while True:
         name = response.split("!", 1)[0][1:]
         message = response.split("PRIVMSG", 1)[1].split(":", 1)[1]
 
-        if "hi " + botNick in response:
+        if "hi " + botNick in message:
             irc.message(f"Herro {name}!")
 
+        if "$threads" in message:
+            irc.message(f"Active threads: {threading.active_count()}")
+
+        # Kills the thread safely
+        if name.lower() == adminName.lower() and message.rstrip() == "$stop":
+            print("Stopping repeated message")
+            stopThreads = True
+            spamThread.join()
 
         if name.lower() == adminName.lower() and message.rstrip() == exitCode:
             irc.message("oh...okay. :'(")
+            stopThreads = True
             # Send the quit command to the IRC server so it knows we’re disconnecting.
             irc.quit()
             break
